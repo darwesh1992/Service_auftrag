@@ -8,16 +8,17 @@
         .document { background: white; width: 210mm; margin: auto; padding: 20mm; border: 1px solid #ccc; }
         h1 { color: #2c3e50; border-bottom: 2px solid #3498db; }
         
-        /* Layout for rows and headers */
         .row, .row-header { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
         .row-header { font-weight: bold; color: #555; }
         .row input { padding: 8px; border: 1px solid #ccc; }
         
-        /* Column sizing to ensure alignment */
         .service-input, .header-service { flex: 2; }
         .price-input, .header-price { flex: 1; }
         
-        button { cursor: pointer; padding: 10px; margin-top: 10px; }
+        /* New styling for total */
+        #totalRow { display: flex; gap: 10px; margin-top: 20px; font-weight: bold; font-size: 1.2em; border-top: 2px solid #eee; padding-top: 10px; }
+        .total-label { flex: 2; text-align: right; }
+        .total-value { flex: 1; }
     </style>
 </head>
 <body>
@@ -31,7 +32,12 @@
             <div class="header-service">Service/Leistung</div>
             <div class="header-price">Service Preis</div>
         </div>
-        </div>
+    </div>
+
+    <div id="totalRow">
+        <div class="total-label">Gesamt:</div>
+        <div class="total-value"><span id="totalSum">0</span> €</div>
+    </div>
     
     <button onclick="addRow()">+ Service hinzufügen</button>
 </div>
@@ -43,23 +49,30 @@
 <script>
     const GET_WEBHOOK = "https://hook.eu1.make.com/ach77us1si5kbnspnbcwdm6jvoz2yrl9";
     const POST_WEBHOOK = "https://hook.eu1.make.com/pw3jrhfbc3xmh4agvsqu2294zkhiwush";
-    
     const urlParams = new URLSearchParams(window.location.search);
     const orderId = urlParams.get('orderId') || urlParams.get('orderid');
 
-    // Function to add a row (either blank or with data)
+    // Function to calculate sum
+    function calculateTotal() {
+        let sum = 0;
+        document.querySelectorAll('.price-input').forEach(input => {
+            sum += parseFloat(input.value) || 0;
+        });
+        document.getElementById('totalSum').textContent = sum.toFixed(2);
+    }
+
     function addRow(service = "", price = "") {
         const container = document.getElementById('serviceContainer');
         const div = document.createElement('div');
         div.className = 'row';
         div.innerHTML = `
-            <input type="text" class="service-input" value="${service}" placeholder="Service" oninput="this.setAttribute('value', this.value)">
-            <input type="number" class="price-input" value="${price}" placeholder="Preis" oninput="this.setAttribute('value', this.value)">
+            <input type="text" class="service-input" value="${service}" placeholder="Service">
+            <input type="number" class="price-input" value="${price}" placeholder="Preis" oninput="calculateTotal()">
         `;
         container.appendChild(div);
+        calculateTotal(); // Calculate whenever a row is added
     }
 
-    // Load Data
     if (orderId) {
         fetch(`${GET_WEBHOOK}?orderId=${orderId}`)
             .then(res => res.json())
@@ -73,7 +86,6 @@
             });
     }
 
-    // Submit
     function submitChanges() {
         const fullHTML = document.getElementById('printable').outerHTML;
         fetch(POST_WEBHOOK, {
